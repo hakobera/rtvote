@@ -36,6 +36,7 @@ describe('db', function() {
         result.title.should.equal(topic.title);
         result.body.should.equal(topic.body);
         result.selections.should.eql(topic.selections);
+        result.should.have.property('createdAt');
 
         done();
       });
@@ -60,6 +61,7 @@ describe('db', function() {
           result.title.should.equal(topic.title);
           result.body.should.equal(topic.body);
           result.selections.should.eql(topic.selections);
+          result.should.have.property('createdAt');
           
           done();
         });
