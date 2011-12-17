@@ -1,9 +1,13 @@
 {
-    "name": "application-name"
+    "name": "rtvote"
   , "version": "0.0.1"
-  , "private": true
   , "dependencies": {
       "express": "2.5.2"
     , "ejs": ">= 0.0.1"
+    , "mongoskin": "0.2.2"
+  }
+  , "devDependencies": {
+      "mocha": "0.5.0"
+    , "should": "0.4.1"
   }
 }
