@@ -8,6 +8,10 @@ var express = require('express')
 
 var app = module.exports = express.createServer();
 
+process.on('uncaughtException', function(e) {
+  console.error(e.message);
+});
+
 // Configuration
 
 app.configure(function(){
