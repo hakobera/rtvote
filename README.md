@@ -232,7 +232,8 @@ Vote
 
 #### mongoskin を package.json に追加
 
-　mongoskin を package.json の dependencies に追加します。ついでに private を削除して、name, 後のテストで使う mocha と should を devDependencies に追加します。
+　mongoskin を package.json の dependencies に追加します。ついでに private を削除して、name を変更して、
+後のテストで使う mocha と should、そして request を devDependencies に追加します。
 
     {
         "name": "rtvote"
@@ -245,6 +246,7 @@ Vote
       , "devDependencies": {
            "mocha": "0.5.0"
         , "should": "0.4.1"
+        , "request": "2.2.9"
       }
    }
 
@@ -465,14 +467,46 @@ test/db.test.js
           });
         });
       });
+
+      it('should throw error when entity specified by topic id is not found', function(done) {
+        db.findTopic('aaaaa5e7b8990c0000000002', function(err, result) {
+          should.exist(err);
+          err.should.instanceof(db.EntityNotFoundError);
+          err.message.should.equal('Topic not found for topic id = aaaaa5e7b8990c0000000002');
+
+          done();
+        });
+      });
+
+      it('should throw error when topic id format is invalid', function(done) {
+        db.findTopic('invalid', function(err, result) {
+          should.exist(err);
+          err.message.should.equal('Argument passed in must be a single String of 12 bytes or a string of 24 hex characters in hex format');
+
+          done();
+        });
+      });
     });
 
   `findTopic(topicId)` は単独ではテストできないので、`createTopic()` と組み合わせてテストします。
-登録した Topic から topicId を取得して、それで検索した結果が最初に登録したものと一致するかどうかをテストしています。今回は正常系の他に、登録されていない topicId を指定した場合に、`Error('Entity not found')` が発生することを確認する例外系のテストケースも追加しています。
+登録した Topic から topicId を取得して、それで検索した結果が最初に登録したものと一致するかどうかをテストしています。
+今回は正常系の他に、登録されていない topicId を指定した場合に、`db.EntityNotFoundError` が発生することを確認する例外系のテストケースも追加しています。
 
 　これを通るように db.js に `findTopic(topicId, callback)` を定義していきます。
 
 lib/db.js
+
+    /**
+     * Entity not found error
+     */
+    function EntityNotFoundError(message) {
+      this.message = message;
+      Error.captureStackTrace(this, this.constructor);
+    }
+    util.inherits(EntityNotFoundError, Error);
+    exports.EntityNotFoundError = EntityNotFoundError;
+
+    (省略)
 
     /**
      * Find topic by topicId.
@@ -487,7 +521,7 @@ lib/db.js
             callback(err);
           } else {
             if (!topic) {
-              callback(new Error('Topic not found for topic id = ' + topicId));
+              callback(new EntityNotFoundError('Topic not found for topic id = ' + topicId));
             } else {
               callback(null, topic);
             }
@@ -497,6 +531,10 @@ lib/db.js
         callback(e);
       }
     };
+
+　カスタム例外の定義では、コンストラクタで `Error.captureStackTrace(this, this.constructor)` を呼び出し、
+`util.inherits(EntityNotFoundError, Error)` で Error を継承します。
+([node/lib/assert.js](https://github.com/joyent/node/blob/master/lib/assert.js#L40-52) の AssertError を参考にしています。）
 
 　テストを実行してみて、全て通ることを確認してください。
 
@@ -511,7 +549,7 @@ lib/db.js
 
 　確認できたら `git add .`、`git commit` しましょう。
 
-#### Topic 作成、表示画面の作成
+#### Topic 作成画面を作る
 
 　Topic の作成、検索ができるようになったので、今度は画面とコントローラを作っていきます。
 今回は Node.js は REST API サーバとなるように設計していくので、次のような URL ルーティングにします。
@@ -519,29 +557,36 @@ lib/db.js
 Topic の作成:
 
 - URL: `POST /topics/`
-- Request
+- request
   - Content-Type: 'application/json'
-  - Body: { title: 'String', body: 'String', selections: [ 'opt1', 'opt2' ] }
-- Response
+  - body: { title: 'String', body: 'String', selections: [ 'opt1', 'opt2' ] }
+- response
   - Content-Type: 'application/json'
   - Body: 作成した Topic オブジェクトの JSON 表記
-
-Topic の topicId 指定検索:
-
-- URL: `GET /topics/:topicId`
-- Response
-  - Content-Type: 'application/json'
-  - Body: topicId に対応する Topic オブジェクトの JSON 表記
-  - 対応するものがみつからない場合は、ステータスコード 404 を返す
+  - request.body の内容が不正な場合、ステータスコード 400 を返す
+  - データベースとの接続、保存に失敗した場合、ステータスコード 500 を返す
 
 　これに対応するルーティングを `app.js` に追加します。
 
-    app.post('/topics', routes.createTopic);
     app.get('/topics/:topicId', routes.findTopic);
 
-　今回もテストから書いていきましょう。
+　今回もテストから書いていきましょう。app.js のテストは実際にサーバを立ち上げて、リクエストを送信することで実施します。
+レクエストの処理を簡潔に記述できるように、ここでは request モジュールを利用します。
 
 test/app.test.js
+
+    var app = require('../app.js');
+
+    var should = require('should'),
+        request = require('request'),
+        util = require('util');
+
+    function testUrl(path) {
+      if (path.substr(0, 1) !== '/') {
+        path = '/' + path;
+      }
+      return util.format('http://localhost:%d%s', app.address().port, path);
+    }
 
     describe('app', function() {
       describe('POST /topics', function() {
@@ -642,3 +687,69 @@ Heroku での動作時は、`process.env.MONGOHQ_URL` から、test モード時
         ✓ should throw error when topic id format is invalid
 
     ✔ 6 tests complete (53ms)
+
+  次は検索のための、`findTopic` メソッドを実装しましょう。
+
+Topic の topicId 指定検索:
+
+- URL: `GET /topics/:topicId`
+- response
+  - Content-Type: 'application/json'
+  - body: topicId に対応する Topic オブジェクトの JSON 表記
+  - 対応するものがみつからない場合は、ステータスコード 404 を返す
+
+　これに対応するルーティングを `app.js` に追加します。
+
+    app.get('/topics/:topicId', routes.findTopic);
+
+　テストを書きます。
+
+test/app.test.js
+
+    describe('GET /topics/:topicId', function() {
+      it('should return topic specified by topicId', function(done) {
+        var topic = {
+          title: 'title',
+          body: 'body',
+          selections: [ 'opt1', 'opt2' ]
+        };
+
+        request.post({
+          url: testUrl('/topics'),
+          json: topic
+        }, function(e, r, b) {
+          should.not.exist(e);
+          b.should.have.property('_id');
+
+          var topicId = b._id;
+          request.get({
+            url: testUrl('/topics/' + topicId)
+          }, function(err, res, body) {
+            should.not.exist(err);
+            res.statusCode.should.equal(200);
+            res.header('content-type').should.equal('application/json; charset=utf-8');
+
+            var result = JSON.parse(body);
+            result.title.should.equal(topic.title);
+            result.body.should.equal(topic.body);
+            result.selections.should.eql(topic.selections);
+
+            done();
+          });
+        });
+      });
+
+      it('should return 404 when topic specified by topicId is not found', function(done) {
+        request.get({
+          url: testUrl('/topics/aaaaceee2da6f9e837000001')
+        }, function(err, res, body) {
+          should.not.exist(err);
+          res.statusCode.should.equal(404);
+
+          done();
+        });
+      });
+    });
+
+
+　これを通るメソッドを実装します。

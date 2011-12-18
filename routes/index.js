@@ -19,7 +19,7 @@ exports.index = function(req, res){
 };
 
 /**
- * POST Create topic
+ * POST create topic
  */
 exports.createTopic = function(req, res) {
   var topic = req.body;
@@ -29,6 +29,28 @@ exports.createTopic = function(req, res) {
     db.createTopic(topic, function(err, result) {
       if (err) {
         res.json(err, 500);
+      } else {
+        res.json(result);
+      }
+    });
+  }
+};
+
+/**
+ * GET find topic by topicId
+ */
+exports.findTopic = function(req, res) {
+  var topicId = req.param('topicId');
+  if (!topicId) {
+    res.json({}, 404);
+  } else {
+    db.findTopic(topicId, function(err, result) {
+      if (err) {
+        if (err instanceof db.EntityNotFoundError) {
+          res.json(err.message, 404);
+        } else {
+          res.json(err, 500);
+        }
       } else {
         res.json(result);
       }

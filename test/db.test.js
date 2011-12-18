@@ -71,6 +71,7 @@ describe('db', function() {
     it('should throw error when entity specified by topic id is not found', function(done) {
       db.findTopic('aaaaa5e7b8990c0000000002', function(err, result) {
         should.exist(err);
+        err.should.instanceof(db.EntityNotFoundError);
         err.message.should.equal('Topic not found for topic id = aaaaa5e7b8990c0000000002');
 
         done();
