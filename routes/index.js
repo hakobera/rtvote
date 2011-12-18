@@ -15,7 +15,7 @@ db.connect(process.env.MONGOHQ_URL || 'localhost/rtvote', function(err) {
  */
 
 exports.index = function(req, res){
-  res.render('index', { title: 'Express' });
+  res.render('index', { title: 'Create Topic' });
 };
 
 /**
@@ -56,4 +56,22 @@ exports.findTopic = function(req, res) {
       }
     });
   }
+};
+
+/**
+ * GET show topic
+ */
+exports.showTopic = function(req, res, next) {
+  var topicId = req.param('topicId');
+  db.findTopic(topicId, function(err, result) {
+    if (err) {
+      if (err instanceof db.EntityNotFoundError) {
+        res.json(err.message, 404);
+      } else {
+        res.json(err, 500);
+      }
+    } else {
+      res.render('vote.ejs', { title: result.title, topic: result });
+    }
+  });
 };

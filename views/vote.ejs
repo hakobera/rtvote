@@ -1,0 +1,13 @@
+<h1><%= topic.title %></h1>
+<form class="form-stacked" action="/votes/<%= topic._id %>" method="post">
+  <fieldset class="question">
+    <legend><%= topic.body %></legend>
+    <div class="actions selections">
+    <% for (var i = 0, l = topic.selections.length; i < l; ++i) { %>
+      <div>
+        <input type="button" class="btn primary xlarge selection" value="<%= topic.selections[i] %>"/>
+      </div>
+    <% } %>
+    </div>
+  </fieldset>
+</form>

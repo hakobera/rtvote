@@ -1,2 +1,81 @@
 <h1><%= title %></h1>
-<p>Welcome to <%= title %></p>
+<form action="#">
+  <fieldset>
+    <legend>Topic</legend>
+    <div class="clearfix">
+      <label for="title">Title</label>
+      <div class="input">
+        <input class="xxlarge" id="title" name="title" type="text"/>
+      </div>
+    </div>
+    <div class="clearfix">
+      <label for="body">Question</label>
+      <div class="input">
+        <textarea class="xxlarge" id="body" name="body" cols="80" rows="3"></textarea>
+      </div>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Selections</legend>
+    <div class="clearfix">
+      <label for="selection1">1:</label>
+      <div class="input">
+        <input class="xxlarge selection" id="selection1" name="selection1" type="text"/>
+      </div>
+    </div>
+    <div class="clearfix">
+      <label for="selection1">2:</label>
+      <div class="input">
+        <input class="xxlarge selection" id="selection2" name="selection2" type="text"/>
+      </div>
+    </div>
+    <div class="clearfix">
+      <label for="selection1">3:</label>
+      <div class="input">
+        <input class="xxlarge selection" id="selection3" name="selection3" type="text"/>
+      </div>
+    </div>
+    <div class="clearfix">
+      <label for="selection1">4:</label>
+      <div class="input">
+        <input class="xxlarge selection" id="selection4" name="selection4" type="text"/>
+      </div>
+    </div>
+  </fieldset>
+  <div class="actions">
+    <button type="submit" id="createTopic" class="btn primary">Create Topic</button>
+  </div>
+</form>
+<script type="text/javascript">
+$(function() {
+  $('#createTopic').click(function(e) {
+    e.preventDefault();
+
+    var self = $(this);
+    self.attr('disabled', 'disabled');
+
+    var topic = { selections: [] };
+    topic.title = $('#title').val();
+    topic.body = $('#body').val();
+
+    $('.selection').each(function() {
+      var v = $(this).val();
+      if (v && v !== '') {
+        topic.selections.push(v);
+      }
+    });
+
+    $.post('/topics', topic)
+      .success(function(data) {
+        window.location.href = '/votes/' + data._id;
+        console.log(data);
+      })
+      .error(function() {
+        alert('error');
+      })
+      .complete(function() {
+        self.removeAttr('disabled');
+      });
+  });
+});
+</script>

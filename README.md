@@ -667,6 +667,12 @@ test/app.test.js
 
 　先頭にモードによって接続する MongoDB の URL を切り替える処理を書いています。
 Heroku での動作時は、`process.env.MONGOHQ_URL` から、test モード時には `localhost/rtvote-test` に接続します。
+　レスポンスを返す部分では、`res.json(obj)` メソッドを利用することで、
+レスポンスの JSON 文字列化と、`Content-Type: application/json` の設定が一度にできて便利です。
+`res.json(obj)` は以下のコードと等価です。
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(obj);
 
 　それでは、実際にテストを走らせてみましょう。test モードで実行するために、`mocha` コマンドの前に `NODE_ENV=test` をつけて実行します。
 
@@ -753,3 +759,80 @@ test/app.test.js
 
 
 　これを通るメソッドを実装します。
+
+route/index.js
+
+    /**
+     * GET find topic by topicId
+     */
+    exports.findTopic = function(req, res) {
+      var topicId = req.param('topicId');
+      if (!topicId) {
+        res.json({}, 404);
+      } else {
+        db.findTopic(topicId, function(err, result) {
+          if (err) {
+            if (err instanceof db.EntityNotFoundError) {
+              res.json(err.message, 404);
+            } else {
+              res.json(err, 500);
+            }
+          } else {
+            res.json(result);
+          }
+        });
+      }
+    };
+
+  `/topics/:topicId` のように指定した場合、`:topicId` に対応する URL パスパラメータは `req.param()` メソッドで取得することができます。
+これで取得した topicId を検索キーにして検索し、その結果を返します。
+エラーが発生した場合は、結果がみつからなかったのか、別のエラーが発生したのかを区別するために、エラーの型を `instanceof` で
+判定して、ステータスコードを変更しています。
+
+    $ NODE_ENV=test mocha
+    Express server listening on port 3000 in test mode
+
+    app
+      POST /topics
+        ✓ should create topic and return it as JSON
+        ✓ should not accept when no body is supplied
+      GET /topics/:topicId
+        ✓ should return topic specified by topicId
+        ✓ should return 404 when topic specified by topicId is not found
+
+    db
+      .createTopic()
+        ✓ should create a topic
+      .findTopic()
+        ✓ should return a topic specified by topic id
+        ✓ should throw error when entity specified by topic id is not found
+        ✓ should throw error when topic id format is invalid
+
+    ✔ 8 tests complete (58ms)
+
+　テストも無事に通りましたね。ということで、今度は画面を作りましょう。
+
+views/layout.ejs
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title><%= title %> | rtvote</title>
+      <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css"/>
+      <link rel="stylesheet" href="/stylesheets/style.css" />
+      <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    </head>
+    <body>
+      <div class="container">
+        <%- body %>
+      </div>
+    </body>
+    </html>
+
+　今回、画面作成に [Twitter Bootstrap](http://twitter.github.com/bootstrap/) と
+[jQuery[(http://jquery.com/) を利用するので、それぞれの CDN 配布のURL を追加しています。
+
+views/index.ejs
+
+　Topic の作成画面では表示の都合上、投票の選択肢を４つまでに制限することにします。
+ただし、プログラムの作り上の上限ではないので、数を変えたいという人は適宜増減させてみてください。
