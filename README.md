@@ -830,9 +830,265 @@ views/layout.ejs
     </html>
 
 　今回、画面作成に [Twitter Bootstrap](http://twitter.github.com/bootstrap/) と
-[jQuery[(http://jquery.com/) を利用するので、それぞれの CDN 配布のURL を追加しています。
+[jQuery](http://jquery.com/) を利用するので、それぞれの CDN 配布のURL を追加しています。
 
 views/index.ejs
 
+    <h1><%= title %></h1>
+    <form action="#">
+      <fieldset>
+        <legend>Topic</legend>
+        <div class="clearfix">
+          <label for="title">Title</label>
+          <div class="input">
+            <input class="xxlarge" id="title" name="title" type="text"/>
+          </div>
+        </div>
+        <div class="clearfix">
+          <label for="body">Question</label>
+          <div class="input">
+            <textarea class="xxlarge" id="body" name="body" cols="80" rows="3"></textarea>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Selections</legend>
+        <div class="clearfix">
+          <label for="selection1">1:</label>
+          <div class="input">
+            <input class="xxlarge selection" id="selection1" name="selection1" type="text"/>
+          </div>
+        </div>
+        <div class="clearfix">
+          <label for="selection1">2:</label>
+          <div class="input">
+            <input class="xxlarge selection" id="selection2" name="selection2" type="text"/>
+          </div>
+        </div>
+        <div class="clearfix">
+          <label for="selection1">3:</label>
+          <div class="input">
+            <input class="xxlarge selection" id="selection3" name="selection3" type="text"/>
+          </div>
+        </div>
+        <div class="clearfix">
+          <label for="selection1">4:</label>
+          <div class="input">
+            <input class="xxlarge selection" id="selection4" name="selection4" type="text"/>
+          </div>
+        </div>
+      </fieldset>
+      <div class="actions">
+        <button type="submit" id="createTopic" class="btn primary">Create Topic</button>
+      </div>
+    </form>
+
 　Topic の作成画面では表示の都合上、投票の選択肢を４つまでに制限することにします。
 ただし、プログラムの作り上の上限ではないので、数を変えたいという人は適宜増減させてみてください。
+これでレイアウトが完成したので、ここから REST API を呼び出すクライアントコードをページ下部に追加します。
+
+    <script type="text/javascript">
+    $(function() {
+      $('#createTopic').click(function(e) {
+        e.preventDefault();
+
+        var self = $(this);
+        self.attr('disabled', 'disabled');
+
+        var topic = { selections: [] };
+        topic.title = $('#title').val();
+        topic.body = $('#body').val();
+
+        $('.selection').each(function() {
+          var v = $(this).val();
+          if (v && v !== '') {
+            topic.selections.push(v);
+          }
+        });
+
+        $.post('/topics', topic)
+          .success(function(data) {
+            window.location.href = '/votes/' + data._id;
+            console.log(data);
+          })
+          .error(function() {
+            alert('Error!');
+          })
+          .complete(function() {
+            self.removeAttr('disabled');
+          });
+      });
+    });
+    </script>
+
+　データを JSON 形式で組み立て、連続クリックによる2重送信防止しておき、Ajax で POST しています。これで Topic 作成画面の作成は終了です。
+
+　次に、Topic を作成した後に遷移させる投票画面を作成していきます。
+ここではまだ投票機能は実装していませんが、まずは作成した Topic を表示させてみましょう。
+
+　まず、この画面に遷移させるためのコントロールロジックを app.js と routes/index.js に追加します。
+
+app.js
+
+    app.get('/votes/:topicId', routes.showTopic);
+
+routes/index.js
+
+    /**
+     * GET show topic
+     */
+    exports.showTopic = function(req, res, next) {
+      var topicId = req.param('topicId');
+      db.findTopic(topicId, function(err, result) {
+        if (err) {
+          if (err instanceof db.EntityNotFoundError) {
+            res.json(err.message, 404);
+          } else {
+            res.json(err, 500);
+          }
+        } else {
+          res.render('vote', { title: result.title, topic: result });
+        }
+      });
+    };
+
+　最後に showTopic メソッドで呼び出している render の引数に対応するテンプレート vote.ejs を作成します。
+views フォルダに vote.ejs という名前のファイルを作り、次のように入力してください。
+`res.render` メソッドの第2引数に指定したオブジェクトは指定した名前でテンプレートから参照できます。
+topic には topicId に対応するデータを格納しているので、これで Topic のデータが表示できます。
+
+views/vote.ejs
+
+    <h1><%= topic.title %></h1>
+    <h2><pre><%= topic.body %></pre></h2>
+    <form class="form-stacked" action="/votes/<%= topic._id %>" method="post">
+      <div class="actions selections">
+      <% for (var i = 0, l = topic.selections.length; i < l; ++i) { %>
+        <div>
+          <input type="button" class="btn xlarge selection" value="<%= topic.selections[i] %>"/>
+        </div>
+      <% } %>
+      </div>
+    </form>
+
+　仕上げとして、CSS を少し調整します。
+
+public/stylesheets/styel.css
+
+    body {
+      padding: 50px;
+    }
+    
+    h2 pre {
+      border: 0;
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.5em;
+    }
+
+    .selections div {
+      margin-bottom: 20px;
+    }
+
+    .selections input.btn {
+      height: 3em;
+      text-align: left;
+    }
+
+　これで登録した Topic が表示できるようになりました。実際の画面から Topic を登録して、登録したものが表示できることを確認してください。
+また、mongo のコマンドラインインターフェースで以下のコマンドを実行して、
+実際にデータベースの topics コレクションにデータが格納されているのを確認してください。
+
+    $ mongo rtvote-test
+    mongo rtvote-test
+    MongoDB shell version: 1.8.1
+    connecting to: rtvote-test
+    > db.topics.find();
+
+#### 投票機能を実装する
+
+　これで画面はほぼ完成したので、ついに投票機能を追加します。投票機能は１票投票する機能と、集計結果を取得する機能からなります。
+ですので、２つの API を作成します。まずは、１票投票する `makeVote` から考えていきます。
+
+Topic に１票投票する:
+
+- URL: `POST /votes/:topicId`
+  - Content-Type: 'application/json'
+  - body: １票に対応する Vote オブジェクトの JSON 表記
+  - 対応する Topic がみつからない場合は、ステータスコード 404 を返す
+
+　この仕様に基づいて実装していきます。実装の手順については基本的に Topic と同じです。
+
+　app.js にルーティンを追加。
+
+app.js
+
+    app.post('/votes/:topicId', routes.makeVote);
+
+　lib/db.js にデータベースアクセスロジックを追加。`db.makeVote` では投票対象の Topic を検索して存在するかどうかチェックします。
+
+lib/db.js
+
+    /**
+     * Vote collection name
+     * @constant
+    */
+    var COLLECTION_VOTE = 'votes';
+
+    (省略)
+
+    /**
+     * Make a vote to a topic specified by topicId.
+     *
+     * @param {String} topicId Topic ID to vote
+     * @param {String} selection selected value
+     * @param {Function} callback Call when vote is created or failed
+     */
+    exports.makeVote = function(topicId, selection, callback) {
+      exports.findTopic(topicId, function(e, topic) {
+        if (e) {
+          callback(e);
+        } else {
+          var vote = {
+            topicId: topicId,
+            selection: selection,
+            createdAt: new Date()
+          };
+
+          db.collection(COLLECTION_VOTE).insert(vote, function(err, docs) {
+            if (err) {
+              callback(err);
+            } else {
+              callback(null, docs[0]);
+            }
+          });
+        }
+      });
+    };
+
+　最後にコントローラロジックを実装します。
+
+routes/index.js
+
+    /**
+     * POST make a vote
+     */
+    exports.makeVote = function(req, res, next) {
+      var topicId = req.param('topicId'),
+          selection = req.param('selection');
+
+      db.makeVote(topicId, selection, function(err, result) {
+        if (err) {
+          if (err instanceof db.EntityNotFoundError) {
+            res.json(err.message, 404);
+          } else {
+            res.json(err, 500);
+          }
+        } else {
+          res.json(result);
+        }
+      });
+    };
+
+　ここでは省略しますが、テストを書くのも忘れないでください。テストが全て通ったら、一旦 git commit しましょう。
+ 

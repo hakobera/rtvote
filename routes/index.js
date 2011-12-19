@@ -75,3 +75,23 @@ exports.showTopic = function(req, res, next) {
     }
   });
 };
+
+/**
+ * POST make a vote
+ */
+exports.makeVote = function(req, res, next) {
+  var topicId = req.param('topicId'),
+      selection = req.param('selection');
+
+  db.makeVote(topicId, selection, function(err, result) {
+    if (err) {
+      if (err instanceof db.EntityNotFoundError) {
+        res.json(err.message, 404);
+      } else {
+        res.json(err, 500);
+      }
+    } else {
+      res.json(result);
+    }
+  });
+};

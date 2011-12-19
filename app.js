@@ -39,6 +39,7 @@ app.post('/topics', routes.createTopic);
 app.get('/topics/:topicId', routes.findTopic);
 
 app.get('/votes/:topicId', routes.showTopic);
+app.post('/votes/:topicId', routes.makeVote);
 
 
 app.listen(process.env.PORT || 3000);

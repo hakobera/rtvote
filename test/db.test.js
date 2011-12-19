@@ -87,4 +87,40 @@ describe('db', function() {
       });
     });
   });
+
+  describe('.makeVote()', function() {
+    it('should crate vote and return it', function(done) {
+      var topic = {
+        title: 'Test topic',
+        body: 'What kind of fruit do you like?',
+        selections: [ 'apple', 'banana' ]
+      };
+
+      db.createTopic(topic, function(e, tp) {
+        should.not.exist(e);
+        tp.should.have.property('_id');
+
+        var selection = topic.selections[1];
+        db.makeVote(tp._id, selection, function(err, result) {
+          should.not.exist(err);
+          result.should.have.property('_id');
+          result.topicId.should.equal(tp._id);
+          result.selection.should.equal(selection);
+          result.should.have.property('createdAt');
+
+          done();
+        });
+      });
+    });
+
+    it('should throw error when vote target topic specified by topic id is not found', function(done) {
+      db.makeVote('aaaaa5e7b8990c0000000002', 'value', function(err, result) {
+        should.exist(err);
+        err.should.instanceof(db.EntityNotFoundError);
+        err.message.should.equal('Topic not found for topic id = aaaaa5e7b8990c0000000002');
+
+        done();
+      });
+    });
+  });
 });

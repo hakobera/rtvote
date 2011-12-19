@@ -1,13 +1,11 @@
 <h1><%= topic.title %></h1>
+<h2><pre><%= topic.body %></pre></h2>
 <form class="form-stacked" action="/votes/<%= topic._id %>" method="post">
-  <fieldset class="question">
-    <legend><%= topic.body %></legend>
-    <div class="actions selections">
-    <% for (var i = 0, l = topic.selections.length; i < l; ++i) { %>
-      <div>
-        <input type="button" class="btn xlarge selection" value="<%= topic.selections[i] %>"/>
-      </div>
-    <% } %>
+  <div class="actions selections">
+  <% for (var i = 0, l = topic.selections.length; i < l; ++i) { %>
+    <div>
+      <input type="button" class="btn xlarge selection" value="<%= topic.selections[i] %>"/>
     </div>
-  </fieldset>
+  <% } %>
+  </div>
 </form>
