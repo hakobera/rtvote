@@ -1090,5 +1090,42 @@ routes/index.js
       });
     };
 
-　ここでは省略しますが、テストを書くのも忘れないでください。テストが全て通ったら、一旦 git commit しましょう。
- 
+　これでサーバ側の実装ができたので、次はクライアント側の実装です。
+
+views/vote.ejs
+
+    <script type="text/javascript">
+    $(function() {
+      var selections = $('.selection');
+
+      selections.click(function(e) {
+        e.preventDefault();
+
+        var self = this,
+            action = self.form.action;
+
+        selections.removeClass('primary');
+        $(self).addClass('primary');
+
+        $.post(action, { selection: self.value })
+          .success(function(data) {
+            // console.log(data);
+          })
+          .error(function() {
+            alert('Error!');
+          });
+      });
+    });
+    </script>
+
+  今回は、ログイン処理を実装しないので、１人で何回でも投票できてしまいますが、
+ログイン処理を実装して、１人１回しか投票できないようにするのは、良い課題だと思いますので、時間があれば挑戦してみてください。
+
+　ここまでできたら、実際に画面から投票してみてください。実際にデータが入っているかどうかは、前と同じように mongo の CLI で確かめましょう。
+
+    > db.votes.find()
+    { "topicId" : ObjectId("4eef735f2f935fc74a000007"), "selection" : "banana", "createdAt" : ISODate("2011-12-19T17:24:47.224Z"), "_id" : ObjectId("4eef735f2f935fc74a000008") }
+    { "topicId" : ObjectId("4eef73ff132064514b000007"), "selection" : "banana", "createdAt" : ISODate("2011-12-19T17:27:27.199Z"), "_id" : ObjectId("4eef73ff132064514b000008") }
+
+  こんな感じでデータが入っていればOKです。また、ここでは省略していますが、テストを書くのも忘れないでください。テストが全て通ったら、一旦 git commit しましょう。
+

@@ -9,3 +9,26 @@
   <% } %>
   </div>
 </form>
+<script type="text/javascript">
+$(function() {
+  var selections = $('.selection');
+
+  selections.click(function(e) {
+    e.preventDefault();
+
+    var self = this,
+        action = self.form.action;
+
+    selections.removeClass('primary');
+    $(self).addClass('primary');
+
+    $.post(action, { selection: self.value })
+      .success(function(data) {
+        // console.log(data);
+      })
+      .error(function() {
+        alert('Error!');
+      });
+  });
+});
+</script>
