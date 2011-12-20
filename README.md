@@ -23,7 +23,7 @@ Author: Kazuyuki Honda [@hakobera](https://twitter.com/#!/hakobera)
 
 デモ
 [投票画面](http://stark-water-3025.herokuapp.com/votes/4ef09d4039c11c0100000001)
-[投票作成画面](http://stark-water-3025.herokuapp.com/votes/)
+[投票作成画面](http://stark-water-3025.herokuapp.com/)
 
 デモでは好きな投票を作っていただいて構いません。
 
