@@ -1,4 +1,5 @@
-var db = require('../lib/db');
+var db = require('../lib/db'),
+    io = require('../lib/io');
 
 var MONGO_URL = process.env.MONGOHQ_URL || 'localhost/rtvote';
 if (process.env.NODE_ENV === 'test') {
@@ -63,6 +64,8 @@ exports.findTopic = function(req, res) {
  */
 exports.showTopic = function(req, res, next) {
   var topicId = req.param('topicId');
+  io.namespace(topicId);
+
   db.findTopic(topicId, function(err, result) {
     if (err) {
       if (err instanceof db.EntityNotFoundError) {
@@ -92,6 +95,7 @@ exports.makeVote = function(req, res, next) {
       }
     } else {
       res.json(result);
+      io.namespace(topicId).emit('update', { test: topicId });
     }
   });
 };

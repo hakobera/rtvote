@@ -5,6 +5,7 @@
       "express": "2.5.2"
     , "ejs": ">= 0.0.1"
     , "mongoskin": "0.2.2"
+    , "socket.io": "0.8.x"
   }
   , "devDependencies": {
       "mocha": "0.5.0"

@@ -9,6 +9,7 @@
   <% } %>
   </div>
 </form>
+<script type="text/javascript" src="/socket.io/socket.io.js"></script>
 <script type="text/javascript">
 $(function() {
   var selections = $('.selection');
@@ -29,6 +30,11 @@ $(function() {
       .error(function() {
         alert('Error!');
       });
+  });
+
+  var socket = io.connect('/<%= topic._id %>');
+  socket.on('update', function(data) {
+    console.log(data);
   });
 });
 </script>

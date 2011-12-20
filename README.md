@@ -1005,7 +1005,7 @@ public/stylesheets/styel.css
     connecting to: rtvote-test
     > db.topics.find();
 
-#### 投票機能を実装する
+### 投票機能を実装する
 
 　これで画面はほぼ完成したので、ついに投票機能を追加します。投票機能は１票投票する機能と、集計結果を取得する機能からなります。
 ですので、２つの API を作成します。まずは、１票投票する `makeVote` から考えていきます。
@@ -1128,4 +1128,163 @@ views/vote.ejs
     { "topicId" : ObjectId("4eef73ff132064514b000007"), "selection" : "banana", "createdAt" : ISODate("2011-12-19T17:27:27.199Z"), "_id" : ObjectId("4eef73ff132064514b000008") }
 
   こんな感じでデータが入っていればOKです。また、ここでは省略していますが、テストを書くのも忘れないでください。テストが全て通ったら、一旦 git commit しましょう。
+
+### 投票結果をリアルタイムで表示できるようにする
+
+　ここまでで普通の投票システムが完成しましたが、ここに「リアルタイム」な要素を加えてみましょう。
+投票するとその結果をリアルタイムに更新される円グラフで表示するようにしてみます。モジュールとしては、WebSocket 相当の機能を
+ほぼ全ブラウザで利用できるようできる Node.js の代表的なモジュールである [Socket.IO](http://socket.io/) を利用します。
+
+　Socket.IO を利用できるように package.json の dependencies に socket.io を追加します。
+0.8系の最新版を取得できるようにバージョン指定は `"0.8.x"` とします。
+
+package.json
+
+    , "dependencies": {
+        "express": "2.5.2"
+      , "ejs": ">= 0.0.1"
+      , "mongoskin": "0.2.2"
+      , "socket.io": "0.8.x"
+    }
+
+　依存関係を追加したら忘れずに `npm install` しておきましょう。
+
+    $ npm install -d
+
+　次に、Socket.IO をラップしたモジュールを lib/io.js というファイル名で作成します。
+
+lib/io.js
+
+　まずは初期化処理と設定部分。
+
+    var sio = require('socket.io'),
+    util = require('util');
+
+    /**
+     * io module
+     */
+    var io = null;
+
+    /**
+     * Listen app and create Socket.IO server.
+     *
+     * @param {Object} app Express application
+     */
+    exports.listen = function(app) {
+      if (!io) {
+        io = sio.listen(app);
+
+        io.configure('production', function() {
+          io.enable('browser client minification');
+          io.enable('browser client etag');
+          io.enable('browser client gzip');
+          io.set('log level', 1);
+          // Heroku is not support WebSocket
+          io.set('transports', [ 'xhr-polling' ]);
+        });
+
+        io.configure('development', function() {
+          io.set('transports', ['websocket']);
+        });
+      }
+    };
+
+　Socket.IO の configure メソッドを利用すると環境ごとに設定を変更できます。
+今回は Heroku では WebSocket が利用できないため、Heroku 上で動かす production モードでは xhr-polling を、開発環境では WebSocket を使うようにします。
+
+　続いて、今回は Topic ごとに通知する内容（集計結果）が異なるため、クライアントをグループ化する必要があります。
+ここでは Socket.IO のネームスペースの機能を利用してこれを実装しています。指定した topicId に対応する namespace が既に存在する場合はそれを、
+存在しない場合は、新規に作成して返します。
+
+    /**
+     * Namespaces list
+     */
+    var namespaces = {};
+
+    /**
+     * Get namespace for specified topic.
+     * If namespace is not found, create new one and return it.
+     *
+     * @param {String} topicId Topic ID to create namespace
+     * @return {Object} Socket.IO server for specified namespace.
+     */
+    exports.namespace = function(topicId) {
+      if (namespaces[topicId]) {
+        return namespaces[topicId];
+      } else {
+        var namespace =
+          io.of('/' + topicId)
+            .on('connection', function(socket) {
+              console.log('connected on ' + topicId);
+              socket.on('error', function(e) {
+                console.error(util.inspect(e, true));
+              });
+            });
+        namespaces[topicId] = namespace;
+        return namespace;
+      }
+    };
+
+　これで Socket.IO 関連の実装はできたので、これを app.js, route/index.js に組み込んでいきます。
+
+app.jp
+
+    var express = require('express'),
+    routes = require('./routes'),
+    io = require('./lib/io');　// 追加
+
+    var app = module.exports = express.createServer();
+    io.listen(app); // 追加
+
+route/index.js
+
+　投票画面を表示する時に、namespace を作成します。
+
+    exports.showTopic = function(req, res, next) {
+      var topicId = req.param('topicId');
+      io.namespace(topicId); // 追加
+      ...
+    };
+
+　そして、投票があった時に namespace に対して結果をブロードキャストします。ここではまだ集計結果を取得する処理を書いていないので、
+仮データとして topicId を返しておきます。
+
+    exports.makeVote = function(req, res, next) {
+      var topicId = req.param('topicId'),
+          selection = req.param('selection');
+
+      db.makeVote(topicId, selection, function(err, result) {
+        if (err) {
+          if (err instanceof db.EntityNotFoundError) {
+            res.json(err.message, 404);
+          } else {
+            res.json(err, 500);
+          }
+        } else {
+          res.json(result);
+          io.namespace(topicId).emit('update', { test: topicId }); // 追加
+        }
+      });
+    };
+
+  それではこれに対応するクライアントコードを書いていきましょう。
+
+views/vote.ejs
+
+  Socket.IO のクライアントは Socket.IO モジュールが `/socket.io/socket.io.js` という URL で提供してくれるので、これを利用します。
+また、`io.connect()` の引数には `/ + namespace名` を指定します。今回は namespace = topicId なので、topicId を指定しています。
+最後に `update` イベントでデータを受け取れるように `socket.on` メソッドでリスナを設定しています。
+まだ、集計結果は出力されていないので、とりあえずコンソールに出力して通信ができていることを確認します。
+
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+    (省略)
+
+    var socket = io.connect('/<%= topic._id %>');
+      socket.on('update', function(data) {
+      console.log(data);
+    });
+    </script>
+
+　
 

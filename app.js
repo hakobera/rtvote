@@ -3,10 +3,12 @@
  * Module dependencies.
  */
 
-var express = require('express')
-  , routes = require('./routes')
+var express = require('express'),
+    routes = require('./routes'),
+    io = require('./lib/io');
 
 var app = module.exports = express.createServer();
+io.listen(app);
 
 process.on('uncaughtException', function(e) {
   console.error(e.message);
