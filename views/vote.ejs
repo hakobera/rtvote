@@ -9,7 +9,9 @@
   <% } %>
   </div>
 </form>
+<div id="chartContainer"><canvas width="480" height="300" id="chart"></canvas></div>
 <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+<script type="text/javascript" src="/javascripts/circle.js"></script>
 <script type="text/javascript">
 $(function() {
   var selections = $('.selection');
@@ -32,9 +34,24 @@ $(function() {
       });
   });
 
+  var chart = new html5jp.graph.circle("chart");
+
   var socket = io.connect('/<%= topic._id %>');
   socket.on('update', function(data) {
-    console.log(data);
+    var items = [],
+        item;
+
+    for (k in data) {
+      item = [];
+      item.push(k);
+      item.push(data[k]);
+      items.push(item);
+    }
+
+    if (items.length > 0) {
+      $('div', $('#chartContainer')).remove();
+      chart.draw(items);
+    }
   });
 });
 </script>

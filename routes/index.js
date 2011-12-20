@@ -64,7 +64,14 @@ exports.findTopic = function(req, res) {
  */
 exports.showTopic = function(req, res, next) {
   var topicId = req.param('topicId');
-  io.namespace(topicId);
+
+  io.namespace(topicId, function(socket) {
+    db.getSummary(topicId, function(err, summary) {
+      if (!err) {
+        socket.volatile.emit('update', summary);
+      }
+    });
+  });
 
   db.findTopic(topicId, function(err, result) {
     if (err) {
@@ -95,7 +102,12 @@ exports.makeVote = function(req, res, next) {
       }
     } else {
       res.json(result);
-      io.namespace(topicId).emit('update', { test: topicId });
+      
+      db.getSummary(topicId, function(err, summary) {
+        if (!err) {
+          io.namespace(topicId).volatile.emit('update', summary);
+        }
+      });
     }
   });
 };

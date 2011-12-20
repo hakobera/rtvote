@@ -1,5 +1,6 @@
 var db = require('../lib/db'),
-    should = require('should');
+    should = require('should'),
+    async = require('async');
 
 var TEST_DB = 'localhost/rtvote-test';
 
@@ -89,7 +90,7 @@ describe('db', function() {
   });
 
   describe('.makeVote()', function() {
-    it('should crate vote and return it', function(done) {
+    it('should create vote and return it', function(done) {
       var topic = {
         title: 'Test topic',
         body: 'What kind of fruit do you like?',
@@ -119,6 +120,70 @@ describe('db', function() {
         err.should.instanceof(db.EntityNotFoundError);
         err.message.should.equal('Topic not found for topic id = aaaaa5e7b8990c0000000002');
 
+        done();
+      });
+    });
+  });
+
+  describe('.getSummary()', function() {
+    it('should return count of each selection', function(done) {
+      var s1 = 'apple';
+      var s2 = 'banana';
+
+      async.waterfall([
+        function(callback) {
+          var topic = {
+            title: 'Test topic',
+            body: 'What kind of fruit do you like?',
+            selections: [ s1, s2 ]
+          };
+
+          db.createTopic(topic, function(err, tp) {
+            callback(err, tp);
+          });
+        },
+        function(topic, callback) {
+          db.makeVote(topic._id, s1, function(err, vote) {
+            callback(err, topic);
+          });
+        },
+        function(topic, callback) {
+          db.getSummary(topic._id, function(err, summary) {
+            should.not.exist(err);
+            summary[s1].should.equal(1);
+
+            callback(err, topic);
+          });
+        },
+        function(topic, callback) {
+          db.makeVote(topic._id, s2, function(err, vote) {
+            callback(err, topic);
+          });
+        },
+        function(topic, callback) {
+          db.getSummary(topic._id, function(err, summary) {
+            should.not.exist(err);
+            summary[s2].should.equal(1);
+
+            callback(err, topic);
+          });
+        },
+        function(topic, callback) {
+          db.makeVote(topic._id, s2, function(err, vote) {
+            callback(err, topic);
+          });
+        },
+        function(topic, callback) {
+          db.getSummary(topic._id, function(err, summary) {
+            should.not.exist(err);
+            summary[s1].should.equal(1);
+            summary[s2].should.equal(2);
+
+            callback(err, topic);
+          });
+        }
+      ],
+      function(err) {
         done();
       });
     });

@@ -1050,7 +1050,7 @@ lib/db.js
           callback(e);
         } else {
           var vote = {
-            topicId: topicId,
+            topicId: db.toId(topicId),
             selection: selection,
             createdAt: new Date()
           };
@@ -1135,6 +1135,8 @@ views/vote.ejs
 投票するとその結果をリアルタイムに更新される円グラフで表示するようにしてみます。モジュールとしては、WebSocket 相当の機能を
 ほぼ全ブラウザで利用できるようできる Node.js の代表的なモジュールである [Socket.IO](http://socket.io/) を利用します。
 
+#### Socket.IO の設定
+
 　Socket.IO を利用できるように package.json の dependencies に socket.io を追加します。
 0.8系の最新版を取得できるようにバージョン指定は `"0.8.x"` とします。
 
@@ -1206,9 +1208,10 @@ lib/io.js
      * If namespace is not found, create new one and return it.
      *
      * @param {String} topicId Topic ID to create namespace
+     * @param {Function} onConnectCallback Call when client is conneted
      * @return {Object} Socket.IO server for specified namespace.
      */
-    exports.namespace = function(topicId) {
+    exports.namespace = function(topicId, onConnectCallback) {
       if (namespaces[topicId]) {
         return namespaces[topicId];
       } else {
@@ -1216,6 +1219,11 @@ lib/io.js
           io.of('/' + topicId)
             .on('connection', function(socket) {
               console.log('connected on ' + topicId);
+
+              if (onConnectCallback) {
+                onConnectCallback(socket);
+              }
+
               socket.on('error', function(e) {
                 console.error(util.inspect(e, true));
               });
@@ -1242,6 +1250,7 @@ route/index.js
 
     exports.showTopic = function(req, res, next) {
       var topicId = req.param('topicId');
+
       io.namespace(topicId); // 追加
       ...
     };
@@ -1286,5 +1295,122 @@ views/vote.ejs
     });
     </script>
 
-　
+　なにかトピックを作成して、投票画面でボタンを押してみてください。コンソールに topicId が表示されればOKです。
 
+#### 集計結果の取得とグラフの表示
+
+　それでは仕上げに集計結果の取得と、その結果のグラフ表示を行いましょう。MongoDB で投票結果の集計を行うには、MapReduce 機能を利用します。
+これは SQL でいう group by に近い機能になります。
+
+参考資料:
+- [SQL to Mongo Mapping Chart](http://www.mongodb.org/display/DOCS/SQL+to+Mongo+Mapping+Chart)
+- [Aggregation](http://www.mongodb.org/display/DOCS/Aggregation) をみると、
+
+　ここで MapReduce について解説を始めると長くなってしまうので、今回は以下のように書くと集計ができるんだな、くらいの感覚で書いてみてください。
+詳細を知りたい人は [MapReduce の公式ドキュメント](http://www.mongodb.org/display/DOCS/MapReduce) を参照してください。
+
+lib/db.js
+
+    /**
+     * Get surmmary (count for each selection) of specified topic
+     *
+     * @param {String} topicId Topic ID to summarize
+     * @param {Function} callback Call when summary data is created or failed
+     */
+    exports.getSummary = function(topicId, callback) {
+      db.collection(COLLECTION_VOTE).group([], { topicId: db.toId(topicId) }, { "count": {} }, "function (obj, prev) { if (prev.count[obj.selection]) { prev.count[obj.selection]++; } else { prev.count[obj.selection] = 1; } }", true, function(err, results) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        callback(null, results[0].count);
+      });
+    };
+　
+　あとはこの結果を Socket.IO でクライアントに送信します。
+
+route/index.js
+
+    exports.showTopic = function(req, res, next) {
+      var topicId = req.param('topicId');
+
+      // 接続時の Callback を追加
+      io.namespace(topicId, function(socket) {
+        db.getSummary(topicId, function(err, summary) {
+          if (!err) {
+            socket.volatile.emit('update', summary);
+          }
+        });
+      });
+      (省略)
+    };
+
+    (省略)
+
+    exports.makeVote = function(req, res, next) {
+      var topicId = req.param('topicId'),
+          selection = req.param('selection');
+
+      db.makeVote(topicId, selection, function(err, result) {
+        if (err) {
+          if (err instanceof db.EntityNotFoundError) {
+            res.json(err.message, 404);
+          } else {
+            res.json(err, 500);
+          }
+        } else {
+          res.json(result);
+
+          // 以下のように変更
+          db.getSummary(topicId, function(err, summary) {
+            if (!err) {
+              io.namespace(topicId).volatile.emit('update', summary);
+            }
+          });
+        }
+      });
+    };
+
+  最後にこれを円グラフで表示させます。円グラフの描画には HTML5 Canvas を使った [circle.js](http://www.html5.jp/library/graph_circle.html) を利用します。
+JavaScript ファイルをダウンロードしてきて、circle.js を public/javascripts 配下におきます。
+
+  あとは描画用のエリアを追加し、円グラフ描画用にデータを整形するだけです。
+
+views/vote.ejs
+
+    <div id="chartContainer"><canvas width="480" height="300" id="chart"></canvas></div>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="/javascripts/circle.js"></script>
+    <script type="text/javascript" src="/javascripts/circle.js"></script>
+    <script type="text/javascript">
+    (省略)
+    var chart = new html5jp.graph.circle("chart");
+
+    var socket = io.connect('/<%= topic._id %>');
+    socket.on('update', function(data) {
+      var items = [],
+          item;
+
+      for (k in data) {
+        item = [];
+        item.push(k);
+        item.push(data[k]);
+        items.push(item);
+      }
+
+      if (items.length > 0) {
+        $('div', $('#chartContainer')).remove(); // 前回の文字を消す
+        chart.draw(items);
+      }
+    });
+    </script>
+
+  これで完成です。実際に投票してみて、結果がリアルタイムで更新されることを確認してください。
+
+### Heroku で公開する
+
+　最後の仕上げとして、ここまでの結果を git commit し、Heroku に push しましょう。
+
+    $ git add .
+    $ git commit -m 'Complete!'
+    $ git push heroku master
