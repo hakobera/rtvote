@@ -1183,8 +1183,10 @@ lib/io.js
           io.enable('browser client etag');
           io.enable('browser client gzip');
           io.set('log level', 1);
+
           // Heroku is not support WebSocket
-          io.set('transports', [ 'xhr-polling' ]);
+          io.set("transports", ["xhr-polling"]);
+          io.set("polling duration", 10);
         });
 
         io.configure('development', function() {
@@ -1340,7 +1342,7 @@ route/index.js
       io.namespace(topicId, function(socket) {
         db.getSummary(topicId, function(err, summary) {
           if (!err) {
-            socket.volatile.emit('update', summary);
+            socket.emit('update', summary);
           }
         });
       });
