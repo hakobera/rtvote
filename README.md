@@ -1,7 +1,7 @@
 TechHUB.jp Node.js 入門 第3回資料 Node.js で作るリアルタイム投票アプリ
 =================================================================
 
-Last Update: 2011/12/16
+Last Update: 2011/12/21
 
 Author: Kazuyuki Honda [@hakobera](https://twitter.com/#!/hakobera)
 
@@ -19,11 +19,13 @@ Author: Kazuyuki Honda [@hakobera](https://twitter.com/#!/hakobera)
 ソースコードとデモ
 ----------------
 
-TODO: URL の設定
+[github](https://github.com/hakobera/rtvote)
 
-[github](http://xxx)
+デモ
+[投票画面](http://stark-water-3025.herokuapp.com/votes/4ef09d4039c11c0100000001)
+[投票作成画面](http://stark-water-3025.herokuapp.com/votes/)
 
-[デモ](http://xxxx.herokuapp.com)
+デモでは好きな投票を作っていただいて構いません。
 
 前提条件
 ----------
@@ -1413,4 +1415,29 @@ views/vote.ejs
 
     $ git add .
     $ git commit -m 'Complete!'
+
+  push の前に Heroku を production モードに変更し、MongoDB が使えるように MongoHQ アドオンを追加します。
+
+    $ heroku config:add NODE_ENV=production
+    $ heroku addons:add mongohq:free
+
+  全て終了したら、いよいよ公開です。
+
     $ git push heroku master
+    $ heroku open
+
+  ブラウザが開いて、投票作成画面が表示できれば成功です。成功しない場合は、`heroku logs` コマンドを利用して、ログを確認しましょう。
+エラーがあればログに出力されているので、それをヒントに解決しましょう。正しく表示できた方は、投票を作成して実際に動作を確認してみましょう。
+
+まとめ
+-----
+
+　以上で、「Node.js で作るリアルタイム投票アプリ」の解説は終了です。
+ここまでやってきた皆さんは、Node.js のプログラムの基本的な内容がマスターできていると思います。
+　
+　あとはあなたのアイデア次第で色々と試してください。このアプリケーションにログイン機能をつけたり、Twitter との連携機能をつけても良いですし、
+新たなアプリを作ってもよいと思います。この記事があなたの Node.js プログラミングのなにかの助けになれば、著者は嬉しいです。
+
+レッツ　エンジョイ Node.js !!
+
+
