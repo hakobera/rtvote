@@ -1307,8 +1307,8 @@ views/vote.ejs
 これは SQL でいう group by に近い機能になります。
 
 参考資料:
-- [SQL to Mongo Mapping Chart](http://www.mongodb.org/display/DOCS/SQL+to+Mongo+Mapping+Chart)
-- [Aggregation](http://www.mongodb.org/display/DOCS/Aggregation) をみると、
+* [SQL to Mongo Mapping Chart](http://www.mongodb.org/display/DOCS/SQL+to+Mongo+Mapping+Chart)
+* [Aggregation](http://www.mongodb.org/display/DOCS/Aggregation) 
 
 　ここで MapReduce について解説を始めると長くなってしまうので、今回は以下のように書くと集計ができるんだな、くらいの感覚で書いてみてください。
 詳細を知りたい人は [MapReduce の公式ドキュメント](http://www.mongodb.org/display/DOCS/MapReduce) を参照してください。
