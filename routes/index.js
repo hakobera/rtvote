@@ -68,7 +68,7 @@ exports.showTopic = function(req, res, next) {
   io.namespace(topicId, function(socket) {
     db.getSummary(topicId, function(err, summary) {
       if (!err) {
-        socket.volatile.emit('update', summary);
+        socket.emit('update', summary);
       }
     });
   });
