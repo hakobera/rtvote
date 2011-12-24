@@ -5,7 +5,7 @@ var MONGO_URL = process.env.MONGOHQ_URL || 'localhost/rtvote';
 if (process.env.NODE_ENV === 'test') {
   MONGO_URL = 'localhost/rtvote-test';
 }
-db.connect(process.env.MONGOHQ_URL || 'localhost/rtvote', function(err) {
+db.connect(MONGO_URL, function(err) {
   if (err) {
     throw err;
   }
