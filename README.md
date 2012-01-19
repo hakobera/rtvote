@@ -241,13 +241,13 @@ Vote
         "name": "rtvote"
       , "version": "0.0.1"
       , "dependencies": {
-          "express": "2.5.2"
+          "express": "2.5.x"
         , "ejs": ">= 0.0.1"
-        , "mongoskin": "0.2.2"
+        , "mongoskin": "0.2.x"
       }
       , "devDependencies": {
-           "mocha": "0.5.0"
-        , "should": "0.4.1"
+          "mocha": "*"
+        , "should": "*"
         , "request": "2.2.9"
       }
    }
@@ -287,9 +287,6 @@ mocha.opts
 
     --reporter spec
     --ui bdd
-    --ignore-leaks
-
-  `--ignore-leaks` オプションは本来は必要ないのですが、今回利用する mongoskin のバグ回避のために指定しています。mongoskin の master リポジトリでは既に修正されているので、mongoskin のバージョンが上がれば、消せるようになります。
 
 　それではテストを書いていきます。まずは、Topic の作成のメソッドについて考えて書きます。
 
@@ -1144,9 +1141,9 @@ views/vote.ejs
 package.json
 
     , "dependencies": {
-        "express": "2.5.2"
+        "express": "2.5.x"
       , "ejs": ">= 0.0.1"
-      , "mongoskin": "0.2.2"
+      , "mongoskin": "0.2.x"
       , "socket.io": "0.8.x"
     }
 
