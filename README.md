@@ -328,7 +328,7 @@ test/db.test.js
           };
 
           db.createTopic(topic, function(err, result) {
-            should.not.exist(err);
+            if (err) return done(err);
             result.should.have.property('_id');
             result.title.should.equal(topic.title);
             result.body.should.equal(topic.body);
@@ -343,7 +343,7 @@ test/db.test.js
 
 　before メソッドは全てのテストの開始前に呼び出され、MongoDB に接続し、after メソッドは全てのテスト終了後に呼び出されれ、MongoDB から切断しています。
 
-　createTopic メソッドに関しては正常系のテストを記述しています。`db.createTopic()` 呼び出し後に、エラーが発生していないこと、"_id" プロパティが自動設定されていること、残りのプロパティは指定した値が設定されていることを確認しています。
+　createTopic メソッドに関しては正常系のテストを記述しています。`db.createTopic()` 呼び出し後に、エラーが発生していないこと、"_id" プロパティが自動設定されていること、残りのプロパティは指定した値が設定されていることを確認しています。非同期のテストの正常系テストケースでは、コールバック中のエラーは `if (err) return done(err);` で処理するのが mocha の常套句です。こう書くことで、もしエラーが発生した場合、レポートにエラーオブジェクトの内容が表示されます。
 
 　ここで、一旦テストを実行してみましょう。
 
@@ -454,12 +454,11 @@ test/db.test.js
         };
 
         db.createTopic(topic, function(err, tp) {
-          should.not.exist(err);
+          if (err) return done(err);
           tp.should.have.property('_id');
 
-          var topicId = tp._id;
-          db.findTopic(topicId, function(err, result) {
-            result._id.should.eql(topicId);
+          db.findTopic(tp._id, function(err, result) {
+            result._id.toString().should.eql(tp._id.toString());
             result.title.should.equal(topic.title);
             result.body.should.equal(topic.body);
             result.selections.should.eql(topic.selections);
@@ -603,7 +602,7 @@ test/app.test.js
             url: testUrl('/topics'),
             json: topic
           }, function(err, res, body) {
-            should.not.exist(err);
+            if (err) return done(err);
             res.statusCode.should.equal(200);
             res.header('content-type').should.equal('application/json; charset=utf-8');
             body.should.have.property('_id');
@@ -623,7 +622,7 @@ test/app.test.js
               console.log(ress);
             }
           }, function(err, res, body) {
-            should.not.exist(err);
+            if (err) return done(err);
             res.statusCode.should.equal(400);
 
             done();
@@ -726,14 +725,14 @@ test/app.test.js
           url: testUrl('/topics'),
           json: topic
         }, function(e, r, b) {
-          should.not.exist(e);
+          if (e) return done(e);
           b.should.have.property('_id');
 
           var topicId = b._id;
           request.get({
             url: testUrl('/topics/' + topicId)
           }, function(err, res, body) {
-            should.not.exist(err);
+            if (err) return done(err);
             res.statusCode.should.equal(200);
             res.header('content-type').should.equal('application/json; charset=utf-8');
 
@@ -751,7 +750,7 @@ test/app.test.js
         request.get({
           url: testUrl('/topics/aaaaceee2da6f9e837000001')
         }, function(err, res, body) {
-          should.not.exist(err);
+          if (err) return done(err);
           res.statusCode.should.equal(404);
 
           done();

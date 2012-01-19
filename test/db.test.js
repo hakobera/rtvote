@@ -7,18 +7,14 @@ var TEST_DB = 'localhost/rtvote-test';
 describe('db', function() {
   before(function(done) {
     db.connect(TEST_DB, function(err) {
-      if (err) {
-        throw new Error('Error in db.connect(' + TEST_DB + ')');
-      }
+      if (err) return done(err);
       done();
     });
   });
 
   after(function(done) {
     db.close(function(err) {
-      if (err) {
-        throw new Error('Error in db.close()');
-      }
+      if (err) return done(err);
       done();
     });
   });
@@ -32,7 +28,7 @@ describe('db', function() {
       };
 
       db.createTopic(topic, function(err, result) {
-        should.not.exist(err);
+        if (err) return done(err);
         result.should.have.property('_id');
         result.title.should.equal(topic.title);
         result.body.should.equal(topic.body);
@@ -53,12 +49,11 @@ describe('db', function() {
       };
 
       db.createTopic(topic, function(err, tp) {
-        should.not.exist(err);
+        if (err) return done(err);
         tp.should.have.property('_id');
         
-        var topicId = tp._id;
-        db.findTopic(topicId, function(err, result) {
-          result._id.should.eql(topicId);
+        db.findTopic(tp._id, function(err, result) {
+          result._id.toString().should.eql(tp._id.toString());
           result.title.should.equal(topic.title);
           result.body.should.equal(topic.body);
           result.selections.should.eql(topic.selections);
@@ -98,12 +93,12 @@ describe('db', function() {
       };
 
       db.createTopic(topic, function(e, tp) {
-        should.not.exist(e);
+        if (e) return done(e);
         tp.should.have.property('_id');
 
         var selection = topic.selections[1];
         db.makeVote(tp._id, selection, function(err, result) {
-          should.not.exist(err);
+          if (err) return done(err);
           result.should.have.property('_id');
           result.topicId.should.equal(tp._id);
           result.selection.should.equal(selection);
@@ -149,7 +144,7 @@ describe('db', function() {
         },
         function(topic, callback) {
           db.getSummary(topic._id, function(err, summary) {
-            should.not.exist(err);
+            if (err) return done(err);
             summary[s1].should.equal(1);
 
             callback(err, topic);
@@ -162,7 +157,7 @@ describe('db', function() {
         },
         function(topic, callback) {
           db.getSummary(topic._id, function(err, summary) {
-            should.not.exist(err);
+            if (err) return done(err);
             summary[s2].should.equal(1);
 
             callback(err, topic);
@@ -175,7 +170,7 @@ describe('db', function() {
         },
         function(topic, callback) {
           db.getSummary(topic._id, function(err, summary) {
-            should.not.exist(err);
+            if (err) return done(err);
             summary[s1].should.equal(1);
             summary[s2].should.equal(2);
 

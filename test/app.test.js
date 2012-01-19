@@ -24,7 +24,7 @@ describe('app', function() {
         url: testUrl('/topics'),
         json: topic
       }, function(err, res, body) {
-        should.not.exist(err);
+        if (err) return done(err);
         res.statusCode.should.equal(200);
         res.header('content-type').should.equal('application/json; charset=utf-8');
         body.should.have.property('_id');
@@ -41,7 +41,7 @@ describe('app', function() {
         url: testUrl('/topics'),
         json: {}
       }, function(err, res, body) {
-        should.not.exist(err);
+        if (err) return done(err);
         res.statusCode.should.equal(400);
 
         done();
@@ -61,14 +61,14 @@ describe('app', function() {
         url: testUrl('/topics'),
         json: topic
       }, function(e, r, b) {
-        should.not.exist(e);
+        if (e) return done(e);
         b.should.have.property('_id');
 
         var topicId = b._id;
         request.get({
           url: testUrl('/topics/' + topicId)
         }, function(err, res, body) {
-          should.not.exist(err);
+          if (err) return done(err);
           res.statusCode.should.equal(200);
           res.header('content-type').should.equal('application/json; charset=utf-8');
 
@@ -86,7 +86,7 @@ describe('app', function() {
       request.get({
         url: testUrl('/topics/aaaaceee2da6f9e837000001')
       }, function(err, res, body) {
-        should.not.exist(err);
+        if (err) return done(err);
         res.statusCode.should.equal(404);
 
         done();
@@ -106,14 +106,14 @@ describe('app', function() {
         url: testUrl('/topics'),
         json: topic
       }, function(e, r, b) {
-        should.not.exist(e);
+        if (e) return done(e);
         b.should.have.property('_id');
 
         request.post({
           url: testUrl('/votes/' + b._id),
           json: { selection: topic.selections[0] }
         }, function(err, res, body) {
-          should.not.exist(err);
+          if (err) return done(err);
           body.should.have.property('_id');
           body.selection.should.equal(topic.selections[0]);
           body.should.have.property('createdAt');
@@ -127,7 +127,7 @@ describe('app', function() {
       request.get({
         url: testUrl('/votes/aaaaceee2da6f9e837000001')
       }, function(err, res, body) {
-        should.not.exist(err);
+        if (err) return done(err);
         res.statusCode.should.equal(404);
 
         done();
